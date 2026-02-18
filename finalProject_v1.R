@@ -12,6 +12,8 @@
 
 
 # Loading packages
+library(ggplot2)
+library(gridExtra)
 library(randomForest)
 library(caret)
 library(sf)
@@ -84,12 +86,12 @@ plot(rvi_p, range=c(0, 2), main = "RVI FSAR L-Band", col=rev(topo.colors(50)))
 #Combine the raster
 #Sentinel-1
 c_combi <- c(c_vh_agg, c_vv_agg, cr_c)
-names(c_combi) <- c("VH", "VV", "CR")
+names(c_combi) <- c("VH", "VV", "CR",)
 
 #FSAR-L
 l_combi <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
 names(l_combi) <- c("LHV", "LHH", "LVV", "LCR", "LRVI")
-
+head (l_combi)
 #FSAR-L
 p_combi <- c(p_vh, p_hh, p_vv, cr_p, rvi_p)
 names(p_combi) <- c("PHV", "PHH", "PVV", "PCR", "PRVI")
@@ -194,6 +196,9 @@ print(model_pvv_cv)
 print(model_pvv_cv$results)  # CV performance metrics
 
 ########################## Step 3.5: AGB estimation #################################
+
+
+########################## Step 4: Random Forest with cross validation #################################
 #combine l and p band values
 all_fsar <- cbind(
   L_gedi_df[, c("LHV", "LHH", "LVV", "LCR", "LRVI","agb")],
@@ -210,28 +215,95 @@ ctrl <- trainControl(
   savePredictions = "final"
 )
 
-rf_model <- train(
-  agb ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,  
+rf_model_l <- train(
+  log(agb) ~ LHV + LHH + LVV + LCR + LRVI,  
   data = all_fsar,
   method = "rf",
   trControl = ctrl
 )
-rf_model
+rf_model_l
 
-rf_model_log <- train(
-  log(agb) ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,  
+rf_model_p <- train(
+  log(agb) ~ PHV + PHH + PVV + PCR + PRVI,  
   data = all_fsar,
   method = "rf",
   trControl = ctrl,
 )
-rf_model_log
-
-
-########################## Step 4: Random Forest with cross validation #################################
-
+rf_model_p
 ########################## Step 4.5: AGB estimation #################################
+l_combi_50 <- aggregate(l_combi, fact=2, fun=mean, na.rm=TRUE)
+p_combi_50 <- aggregate(p_combi, fact=2, fun=mean, na.rm=TRUE)
+l_combi_df <- na.omit(as.data.frame(l_combi))
+p_combi_df <- na.omit(as.data.frame(p_combi)) 
+# estimation using rf
 
+prediction_l <- predict(rf_model_l, newdata=l_combi_df)
+names(l_combi_df)
+# Don't print all 103k! Just look at summary
+summary(prediction_l)
+
+# Look at first few
+head(prediction_l, 10)
+
+# Check the range
+range(prediction_l)
+
+# Quick histogram to see distribution
+hist(prediction_l, breaks = 50, 
+     main = "Distribution of Predicted AGB",
+     xlab = "Predicted AGB", col = "forestgreen")
+
+prediction_p <- predict(rf_model_p, newdata=p_combi_df)
 
 ########################## Step 5: Validation #################################
+# Calculate validation metrics
+validation_stats <- data.frame(
+  n_pairs = nrow(comparison_df),
+  rmse = sqrt(mean((comparison_df$lvis_agb - comparison_df$rf_predicted)^2)),
+  r2 = cor(comparison_df$lvis_agb, comparison_df$rf_predicted)^2,
+  mae = mean(abs(comparison_df$lvis_agb - comparison_df$rf_predicted)),
+  bias = mean(comparison_df$rf_predicted - comparison_df$lvis_agb),
+  rmse_percent = 100 * sqrt(mean((comparison_df$lvis_agb - comparison_df$rf_predicted)^2)) / mean(comparison_df$lvis_agb)
+)
 
+print(validation_stats)
+
+# Create beautiful comparison plots
+p1 <- ggplot(comparison_df, aes(x = lvis_agb, y = rf_predicted)) +
+  geom_point(alpha = 0.5, color = "darkgreen") +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed", size = 1) +
+  geom_smooth(method = "lm", se = TRUE, color = "blue", alpha = 0.3) +
+  annotate("text", x = max(comparison_df$lvis_agb)*0.7, 
+           y = min(comparison_df$rf_predicted)*1.1,
+           label = paste0("R² = ", round(validation_stats$r2, 3),
+                          "\nRMSE = ", round(validation_stats$rmse, 2),
+                          "\nn = ", validation_stats$n_pairs),
+           hjust = 0, size = 5) +
+  labs(title = "RF Predictions vs LVIS AGB",
+       x = "LVIS AGB (Mg/ha)", y = "RF Predicted AGB (Mg/ha)") +
+  theme_minimal() +
+  coord_fixed()
+
+# Residual plot
+comparison_df$residuals <- comparison_df$rf_predicted - comparison_df$lvis_agb
+
+p2 <- ggplot(comparison_df, aes(x = lvis_agb, y = residuals)) +
+  geom_point(alpha = 0.5, color = "darkgreen") +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed", size = 1) +
+  geom_smooth(method = "loess", color = "blue", se = TRUE) +
+  labs(title = "Residuals vs LVIS AGB",
+       x = "LVIS AGB (Mg/ha)", y = "Residuals (RF - LVIS)") +
+  theme_minimal()
+
+# Density plot of errors
+p3 <- ggplot(comparison_df, aes(x = residuals)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "forestgreen", alpha = 0.7) +
+  geom_density(color = "darkgreen", size = 1) +
+  geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Distribution of Prediction Errors",
+       x = "Prediction Error (RF - LVIS)", y = "Density") +
+  theme_minimal()
+
+# Arrange plots
+grid.arrange(p1, p2, p3, ncol = 2, nrow = 2)
 
