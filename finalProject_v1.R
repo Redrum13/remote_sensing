@@ -194,6 +194,9 @@ print(model_pvv_cv)
 print(model_pvv_cv$results)  # CV performance metrics
 
 ########################## Step 3.5: AGB estimation #################################
+
+
+########################## Step 4: Random Forest with cross validation #################################
 #combine l and p band values
 all_fsar <- cbind(
   L_gedi_df[, c("LHV", "LHH", "LVV", "LCR", "LRVI","agb")],
@@ -216,8 +219,6 @@ rf_model <- train(
   trControl = ctrl,
 )
 rf_model
-
-########################## Step 4: Random Forest with cross validation #################################
 
 ########################## Step 4.5: AGB estimation #################################
 
