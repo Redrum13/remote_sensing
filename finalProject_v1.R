@@ -94,6 +94,7 @@ extract_at_gedi <- function(raster_composite, gedi_points) {
   extracted <- extract(raster_composite, gedi_points, bind = TRUE)
   # Convert to data frame
   df <- as.data.frame(extracted)
+  df <- na.omit(df)
   return(df)
 }
 
@@ -105,10 +106,14 @@ P_gedi_df <- extract_at_gedi(p_combi, gedi_utm)
 # Check column names - identify which column is AGB
 names(S1_gedi_df)
 S1_gedi_df
-# Remove rows with missing values
-S1_gedi_df <- na.omit(S1_gedi_df)
-L_gedi_df <- na.omit(L_gedi_df)
-P_gedi_df <- na.omit(P_gedi_df)
+
+# Set up plotting area
+par(mfrow = c(2, 3))
+
+# Histograms for C-band
+hist(S1_gedi_df$VH, main = "C-band VH", xlab = "Backscatter", col = "lightblue")
+hist(S1_gedi_df$VV, main = "C-band VV", xlab = "Backscatter", col = "lightblue")
+hist(S1_gedi_df$agb, main = "GEDI AGB", xlab = "Biomass (Mg/ha)", col = "lightgreen")
 
 ########################## Step 3: Linear regression with cross validation #################################
 
