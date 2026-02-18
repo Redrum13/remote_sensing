@@ -63,9 +63,10 @@ p_vv
 # CR = VH / VV (on linear scale)
 cr_l <- l_vh / l_vv
 cr_p <- p_vh / p_vv
+cr_c <- c_vh_agg / c_vv_agg
 # radar vegetation index (still check the formula)
-rvi_l <- 4 * l_vh / (l_vv + l_vh) 
-rvi_p <- 4 * p_vh / (p_vv + p_vh)
+rvi_l <- 8*l_vh / (l_hh + l_vv + 2*l_vh)  
+rvi_p <- 8*l_vh / (l_hh + l_vv + 2*l_vh) 
 
 
 ########################## Step 2: Correlation analysis  #################################
