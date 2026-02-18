@@ -102,6 +102,9 @@ S1_gedi_df <- extract_at_gedi(c_combi, gedi_utm)
 L_gedi_df <- extract_at_gedi(l_combi, gedi_utm)
 P_gedi_df <- extract_at_gedi(p_combi, gedi_utm)
 
+# Check column names - identify which column is AGB
+names(S1_gedi_df)
+
 ########################## Step 3: Linear regression with cross validation #################################
 
 ########################## Step 3.5: AGB estimation #################################
