@@ -194,31 +194,40 @@ print(model_pvv_cv)
 print(model_pvv_cv$results)  # CV performance metrics
 
 ########################## Step 3.5: AGB estimation #################################
-
-
-########################## Step 4: Random Forest with cross validation #################################
 #combine l and p band values
 all_fsar <- cbind(
   L_gedi_df[, c("LHV", "LHH", "LVV", "LCR", "LRVI","agb")],
   P_gedi_df[, c("PHV", "PHH", "PVV", "PCR", "PRVI")]
 )
 names(all_fsar)
+all_fsar <- all_fsar[, !duplicated(names(all_fsar))]
 
 #random forest
 ctrl <- trainControl(
   method = "cv",           # Use cross-validation
-  number = 5,             # Number of folds (k=10)
+  number = 5,             # Number of folds (k=5)
   summaryFunction = defaultSummary,  # Use regression metrics (RMSE, R²)
   savePredictions = "final"
 )
 
 rf_model <- train(
-  agb ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,  # All P-band variables
+  agb ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,  
+  data = all_fsar,
+  method = "rf",
+  trControl = ctrl
+)
+rf_model
+
+rf_model_log <- train(
+  log(agb) ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,  
   data = all_fsar,
   method = "rf",
   trControl = ctrl,
 )
-rf_model
+rf_model_log
+
+
+########################## Step 4: Random Forest with cross validation #################################
 
 ########################## Step 4.5: AGB estimation #################################
 
