@@ -104,6 +104,11 @@ P_gedi_df <- extract_at_gedi(p_combi, gedi_utm)
 
 # Check column names - identify which column is AGB
 names(S1_gedi_df)
+S1_gedi_df
+# Remove rows with missing values
+S1_gedi_df <- na.omit(S1_gedi_df)
+L_gedi_df <- na.omit(L_gedi_df)
+P_gedi_df <- na.omit(P_gedi_df)
 
 ########################## Step 3: Linear regression with cross validation #################################
 
