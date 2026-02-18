@@ -82,12 +82,25 @@ c_combi <- c(c_vh_agg, c_vv_agg, cr_c)
 names(c_combi) <- c("VH", "VV", "CR")
 
 #FSAR-L
-l_combi <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
+l_compose <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
 names(l_combi) <- c("LHV", "LHH", "LVV", "LCR", "LRVI")
 
 #FSAR-L
 p_combi <- c(p_vh, p_hh, p_vv, cr_p, rvi_p)
 names(p_combi) <- c("PHV", "PHH", "PVV", "PCR", "PRVI")
+
+extract_at_gedi <- function(raster_composite, gedi_points) {
+  # Extract values
+  extracted <- extract(raster_composite, gedi_points, bind = TRUE)
+  # Convert to data frame
+  df <- as.data.frame(extracted)
+  return(df)
+}
+
+# Extract for each band
+S1_gedi_df <- extract_at_gedi(c_combi, gedi_utm)
+L_gedi_df <- extract_at_gedi(l_combi, gedi_utm)
+P_gedi_df <- extract_at_gedi(p_combi, gedi_utm)
 
 ########################## Step 3: Linear regression with cross validation #################################
 
