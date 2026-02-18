@@ -62,11 +62,17 @@ p_vv
 # CR = VH - VV (on logarithmic (dB) scale)
 # CR = VH / VV (on linear scale)
 cr_l <- l_vh / l_vv
+plot(cr_l, range=c(0, 1), col=rev(topo.colors(15)), main = "Cross Ratio FSAR L-Band")
 cr_p <- p_vh / p_vv
+plot(cr_p, range=c(0, 1), col=rev(topo.colors(15)), main = "Cross Ratio FSAR P-Band")
 cr_c <- c_vh_agg / c_vv_agg
+plot(cr_c, range=c(0, 1), col=rev(topo.colors(15)), main = "Cross Ratio FSAR C-Band")
 # radar vegetation index (still check the formula)
 rvi_l <- 8*l_vh / (l_hh + l_vv + 2*l_vh)  
+plot(rvi_l, range=c(0, 2), main = "RVI FSAR L-Band", col=rev(topo.colors(50)))
 rvi_p <- 8*l_vh / (l_hh + l_vv + 2*l_vh) 
+hist(rvi_p)
+plot(rvi_l, range=c(0, 2), main = "RVI FSAR L-Band", col=rev(topo.colors(50)))
 
 
 ########################## Step 2: Correlation analysis  #################################
