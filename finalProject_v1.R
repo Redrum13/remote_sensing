@@ -124,7 +124,7 @@ hist(P_gedi_df$agb, main = "GEDI AGB", xlab = "Biomass (Mg/ha)", col = "lightgre
 # Correlation matrix (linear)
 S1_cor <- cor(S1_gedi_df[, 4:ncol(S1_gedi_df)], use = "complete.obs", method = "spearman")
 L_cor <- cor(L_gedi_df[, 4:ncol(L_gedi_df)], use = "complete.obs", method = "spearman")
-P_cor <- cor(P_gedi_df[, 4:ncol(P_gedi_df)], use = "complete.obs", method = "spearman"))
+P_cor <- cor(P_gedi_df[, 4:ncol(P_gedi_df)], use = "complete.obs", method = "spearman")
 L_cor
 S1_gedi_df_log <- 10*log10(S1_gedi_df[, 4:ncol(S1_gedi_df)])
 L_gedi_df_log <- 10*log10(L_gedi_df[, 4:ncol(L_gedi_df)])
