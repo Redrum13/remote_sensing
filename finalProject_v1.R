@@ -14,6 +14,9 @@
 # Loading packages
 library(sf)
 library(terra)
+library(corrplot)
+install.packages('corrplot')
+
 
 ########################## Step 1: Pre-processing #################################
 # Read raster data
@@ -126,6 +129,7 @@ S1_cor <- cor(S1_gedi_df[, 4:ncol(S1_gedi_df)], use = "complete.obs", method = "
 L_cor <- cor(L_gedi_df[, 4:ncol(L_gedi_df)], use = "complete.obs", method = "spearman")
 P_cor <- cor(P_gedi_df[, 4:ncol(P_gedi_df)], use = "complete.obs", method = "spearman")
 L_cor
+# Correlation matrix (decible)
 S1_gedi_df_log <- 10*log10(S1_gedi_df[, 4:ncol(S1_gedi_df)])
 L_gedi_df_log <- 10*log10(L_gedi_df[, 4:ncol(L_gedi_df)])
 P_gedi_df_log <- 10*log10(P_gedi_df[, 4:ncol(P_gedi_df)])
@@ -133,6 +137,17 @@ cor_matrix_S1_log <- cor(S1_gedi_df_log, use = "complete.obs", method = "spearma
 cor_matrix_L_log <- cor(L_gedi_df_log, use = "complete.obs", method = "spearman")
 cor_matrix_P_log <- cor(P_gedi_df_log, use = "complete.obs", method = "spearman")
 cor_matrix_L_log
+
+corrplot(
+  cor_matrix_L_log,
+  method = "color",
+  type = "upper",
+  order = "hclust",
+  addCoef.col = "black",
+  tl.col = "black",
+  tl.srt = 45,
+  diag = FALSE
+)
 ########################## Step 3: Linear regression with cross validation #################################
 
 ########################## Step 3.5: AGB estimation #################################
