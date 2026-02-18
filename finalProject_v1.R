@@ -12,6 +12,8 @@
 
 
 # Loading packages
+library(randomForest)
+library(caret)
 library(sf)
 library(terra)
 library(corrplot)
@@ -149,11 +151,71 @@ corrplot(
   diag = FALSE
 )
 ########################## Step 3: Linear regression with cross validation #################################
-lm_P_log <- lm(log(agb) ~ P_HV, data = P_gedi_df)
+#linear model
+lm_P_log <- lm(log(agb) ~ PHV, data = P_gedi_df)
 summary(lm_P_log)
+#cross validation
+# Set up cross-validation
+ctrl <- trainControl(method = "cv",     # cross-validation
+                     number = 5,         # number of folds
+                     verboseIter = TRUE) # show progress
+
+# Train model of HV with CV
+set.seed(123)
+model_phv_cv <- train(log(agb) ~ PHV, 
+                      data = P_gedi_df,
+                      method = "lm",        # linear regression
+                      trControl = ctrl)
+
+# View results
+print(model_phv_cv)
+print(model_phv_cv$results)  # CV performance metrics
+
+# Train model of HH with CV
+set.seed(123)
+model_phh_cv <- train(log(agb) ~ PHH, 
+                      data = P_gedi_df,
+                      method = "lm",        # linear regression
+                      trControl = ctrl)
+
+# View results
+print(model_phh_cv)
+print(model_phh_cv$results)  # CV performance metrics
+
+# Train model of VV with CV
+set.seed(123)
+model_pvv_cv <- train(log(agb) ~ PVV, 
+                      data = P_gedi_df,
+                      method = "lm",        # linear regression
+                      trControl = ctrl)
+
+# View results
+print(model_pvv_cv)
+print(model_pvv_cv$results)  # CV performance metrics
 
 ########################## Step 3.5: AGB estimation #################################
+#combine l and p band values
+all_fsar <- cbind(
+  L_gedi_df[, c("LHV", "LHH", "LVV", "LCR", "LRVI","agb")],
+  P_gedi_df[, c("PHV", "PHH", "PVV", "PCR", "PRVI")]
+)
+names(all_fsar)
 
+#random forest
+ctrl <- trainControl(
+  method = "cv",           # Use cross-validation
+  number = 5,             # Number of folds (k=10)
+  summaryFunction = defaultSummary,  # Use regression metrics (RMSE, R²)
+  savePredictions = "final"
+)
+
+rf_model <- train(
+  agb ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,  # All P-band variables
+  data = all_fsar,
+  method = "rf",
+  trControl = ctrl,
+)
+rf_model
 
 ########################## Step 4: Random Forest with cross validation #################################
 
