@@ -149,6 +149,8 @@ corrplot(
   diag = FALSE
 )
 ########################## Step 3: Linear regression with cross validation #################################
+lm_P_log <- lm(log(agb) ~ P_HV, data = P_gedi_df)
+summary(lm_P_log)
 
 ########################## Step 3.5: AGB estimation #################################
 
