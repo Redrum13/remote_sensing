@@ -82,7 +82,7 @@ c_combi <- c(c_vh_agg, c_vv_agg, cr_c)
 names(c_combi) <- c("VH", "VV", "CR")
 
 #FSAR-L
-l_compose <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
+l_combi <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
 names(l_combi) <- c("LHV", "LHH", "LVV", "LCR", "LRVI")
 
 #FSAR-L
