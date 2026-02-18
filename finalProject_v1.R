@@ -76,18 +76,18 @@ plot(rvi_p, range=c(0, 2), main = "RVI FSAR L-Band", col=rev(topo.colors(50)))
 
 
 ########################## Step 2: Correlation analysis  #################################
-#Compose the raster
+#Combine the raster
 #Sentinel-1
-c_compose <- c(c_vh_agg, c_vv_agg, cr_c)
-names(c_compose) <- c("VH", "VV", "CR")
+c_combi <- c(c_vh_agg, c_vv_agg, cr_c)
+names(c_combi) <- c("VH", "VV", "CR")
 
 #FSAR-L
-l_compose <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
-names(l_compose) <- c("LHV", "LHH", "LVV", "LCR", "LRVI")
+l_combi <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
+names(l_combi) <- c("LHV", "LHH", "LVV", "LCR", "LRVI")
 
 #FSAR-L
-p_compose <- c(p_vh, p_hh, p_vv, cr_p, rvi_p)
-names(p_compose) <- c("PHV", "PHH", "PVV", "PCR", "PRVI")
+p_combi <- c(p_vh, p_hh, p_vv, cr_p, rvi_p)
+names(p_combi) <- c("PHV", "PHH", "PVV", "PCR", "PRVI")
 
 ########################## Step 3: Linear regression with cross validation #################################
 
