@@ -109,12 +109,30 @@ S1_gedi_df
 
 # Set up plotting area
 par(mfrow = c(2, 3))
-
+names(P_gedi_df)
 # Histograms for C-band
 hist(S1_gedi_df$VH, main = "C-band VH", xlab = "Backscatter", col = "lightblue")
 hist(S1_gedi_df$VV, main = "C-band VV", xlab = "Backscatter", col = "lightblue")
 hist(S1_gedi_df$agb, main = "GEDI AGB", xlab = "Biomass (Mg/ha)", col = "lightgreen")
+hist(L_gedi_df$LHV, main = "p-band VH", xlab = "Backscatter", col = "lightblue")
+hist(L_gedi_df$LVV, main = "p-band VV", xlab = "Backscatter", col = "lightblue")
+hist(L_gedi_df$agb, main = "GEDI AGB", xlab = "Biomass (Mg/ha)", col = "lightgreen")
+hist(P_gedi_df$PHV, main = "p-band VH", xlab = "Backscatter", col = "lightblue")
+hist(P_gedi_df$PVV, main = "p-band VV", xlab = "Backscatter", col = "lightblue")
+hist(P_gedi_df$agb, main = "GEDI AGB", xlab = "Biomass (Mg/ha)", col = "lightgreen")
 
+# Correlation matrix (linear)
+S1_cor <- calc_agb_correlations(S1_gedi_df)
+L_cor <- cor(L_gedi_df[, 4:ncol(L_gedi_df)], use = "complete.obs", method = "spearman")
+P_cor <- calc_agb_correlations(P_gedi_df)
+L_cor
+S1_gedi_df_log <- 10*log10(S1_gedi_df[, 4:ncol(S1_gedi_df)])
+L_gedi_df_log <- 10*log10(L_gedi_df[, 4:ncol(L_gedi_df)])
+P_gedi_df_log <- 10*log10(P_gedi_df[, 4:ncol(P_gedi_df)])
+cor_matrix_S1_log <- cor(S1_gedi_df_log, use = "complete.obs", method = "spearman")
+cor_matrix_L_log <- cor(L_gedi_df_log, use = "complete.obs", method = "spearman")
+cor_matrix_P_log <- cor(P_gedi_df_log, use = "complete.obs", method = "spearman")
+cor_matrix_L_log
 ########################## Step 3: Linear regression with cross validation #################################
 
 ########################## Step 3.5: AGB estimation #################################
