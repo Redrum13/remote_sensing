@@ -23,6 +23,7 @@ library(corrplot)
 
 ########################## Step 1: Pre-processing #################################
 # Read raster data
+lvis <- rast("lvis_agb_mean.tif")
 # c band sentinal 
 c_vv <- rast("S1_gamma_VV.nc")
 c_vv
@@ -103,6 +104,8 @@ extract_at_gedi <- function(raster_composite, gedi_points) {
   return(df)
 }
 
+head(as.data.frame(gedi_utm))
+
 # Extract for each band
 S1_gedi_df <- extract_at_gedi(c_combi, gedi_utm)
 L_gedi_df <- extract_at_gedi(l_combi, gedi_utm)
@@ -115,6 +118,15 @@ S1_gedi_df
 # Combine dataframes 
 alldata <- cbind(S1_gedi_df, L_gedi_df)
 alldata <- cbind(alldata, P_gedi_df)
+alldata <- na.omit(alldata)
+alldata <- alldata[, !duplicated(names(alldata))]
+str(alldata)
+log_cols <- c("LHV", "PHV", "LHH", "PHH", "LVV", "PVV", "SVH", "SVV")
+for(col in log_cols) {
+  alldata[paste0(col, "_log")] <- 10*log10(alldata[[col]])
+}
+
+head(alldata)
 
 # Set up plotting area
 par(mfrow = c(2, 3))
@@ -155,10 +167,10 @@ corrplot(
   diag = FALSE
 )
 ########################## Step 3: Linear regression with cross validation #################################
-#linear model
-lm_P_log <- lm(log(agb) ~ PHV, data = P_gedi_df)
-summary(lm_P_log)
-#cross validation
+# P-band cross validation
+
+names(P_gedi_df)
+P_gedi_df <-na.omit(P_gedi_df)
 # Set up cross-validation
 ctrl <- trainControl(method = "cv",     # cross-validation
                      number = 5,         # number of folds
@@ -170,7 +182,6 @@ model_phv_cv <- train(log(agb) ~ PHV,
                       data = P_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
-
 # View results
 print(model_phv_cv)
 print(model_phv_cv$results)  # CV performance metrics
@@ -178,10 +189,9 @@ print(model_phv_cv$results)  # CV performance metrics
 # Train model of HH with CV
 set.seed(123)
 model_phh_cv <- train(log(agb) ~ PHH, 
-                      data = P_gedi_df,
+                      data = fsar_P_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
-
 # View results
 print(model_phh_cv)
 print(model_phh_cv$results)  # CV performance metrics
@@ -189,13 +199,70 @@ print(model_phh_cv$results)  # CV performance metrics
 # Train model of VV with CV
 set.seed(123)
 model_pvv_cv <- train(log(agb) ~ PVV, 
-                      data = P_gedi_df,
+                      data = fsar_P_gedi_df,
+                      method = "lm",        # linear regression
+                      trControl = ctrl)
+# View results
+print(model_pvv_cv)
+print(model_pvv_cv$results)  # CV performance metrics
+
+
+
+# L-band cross validation
+
+# Train model of HV with CV
+set.seed(123)
+model_lhv_cv <- train(log(agb) ~ LHV, 
+                      data = fsar_L_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
 
 # View results
-print(model_pvv_cv)
-print(model_pvv_cv$results)  # CV performance metrics
+print(model_lhv_cv)
+print(model_lhv_cv$results)  # CV performance metrics
+
+# Train model of HH with CV
+set.seed(123)
+model_lhh_cv <- train(log(agb) ~ LHH, 
+                      data = fsar_L_gedi_df,
+                      method = "lm",        # linear regression
+                      trControl = ctrl)
+
+# View model_lhh_cv
+print(model_phh_cv)
+print(model_lhh_cv$results)  # CV performance metrics
+
+# Train model of VV with CV
+set.seed(123)
+model_lvv_cv <- train(log(agb) ~ LVV, 
+                      data = fsar_L_gedi_df,
+                      method = "lm",        # linear regression
+                      trControl = ctrl)
+
+# View results
+print(model_lvv_cv)
+print(model_lvv_cv$results)  # CV performance metrics
+
+#combine to one table
+models <- list(
+  lvv = model_lvv_cv,
+  lhh = model_lhh_cv,
+  lhv = model_lhv_cv,
+  pvv = model_pvv_cv,
+  phh = model_phh_cv,
+  phv = model_phv_cv
+)
+
+# Combine their results into one table with a model column
+library(dplyr)
+
+linear_reg_results_overview <- bind_rows(
+  lapply(names(models), function(nm) {
+    df <- models[[nm]]$results
+    df$model <- nm  # add a column for model name
+    df
+  })
+)
 
 ########################## Step 3.5: AGB estimation #################################
 
@@ -217,46 +284,51 @@ ctrl <- trainControl(
   savePredictions = "final"
 )
 
-rf_model_l <- train(
-  log(agb) ~ LHV + LHH + LVV + LCR + LRVI,  
-  data = all_fsar,
+rf_model <- train(
+  10*log10(agb) ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,  
+  data = alldata,
   method = "rf",
   trControl = ctrl
 )
-rf_model_l
-
-rf_model_p <- train(
-  log(agb) ~ PHV + PHH + PVV + PCR + PRVI,  
-  data = all_fsar,
+rf_model
+names(alldata)
+rf_model_log <- train(
+  10*log10(agb) ~ LHV_log + LHH_log + LVV_log + PHV_log + PHH_log + PVV_log,  
+  data = alldata,
   method = "rf",
-  trControl = ctrl,
+  trControl = ctrl
 )
-rf_model_p
+rf_model_log
+
 ########################## Step 4.5: AGB estimation #################################
-l_combi_50 <- aggregate(l_combi, fact=2, fun=mean, na.rm=TRUE)
-p_combi_50 <- aggregate(p_combi, fact=2, fun=mean, na.rm=TRUE)
-l_combi_df <- na.omit(as.data.frame(l_combi))
-p_combi_df <- na.omit(as.data.frame(p_combi)) 
+alldata_combi <- c(l_combi, p_combi)
+alldata_combi_df <- as.data.frame(alldata_combi, xy=TRUE)
+alldata_combi_df <- na.omit(alldata_combi_df)
+
+names(alldata_combi_df) <- c("lon", "lat", names(alldata_combi))
+
+head(as.data.frame(alldata_combi))
 # estimation using rf
 
-prediction_l <- predict(rf_model_l, newdata=l_combi_df)
-names(l_combi_df)
-# Don't print all 103k! Just look at summary
-summary(prediction_l)
+prediction <- predict(rf_model, newdata=alldata_combi_df)
 
-# Look at first few
-head(prediction_l, 10)
+alldata_combi_df$agb_pred <- prediction
 
-# Check the range
-range(prediction_l)
+head(alldata_combi_df)
 
-# Quick histogram to see distribution
-hist(prediction_l, breaks = 50, 
-     main = "Distribution of Predicted AGB",
-     xlab = "Predicted AGB", col = "forestgreen")
+plot(alldata_combi_df)
 
-prediction_p <- predict(rf_model_p, newdata=p_combi_df)
+r_pred <- rast(alldata_combi_df, type="xyz", crs = crs(alldata_combi))
 
+plot(10^(r_pred$agb_pred/10), main = "AGB estimation RF linear")
+
+r_pred_50 <- aggregate(r_pred, fact=2, fun='mean')
+
+plot(10^(r_pred_50$agb_pred/10), main = "AGB estimation RF linear")
+
+plot(lvis, main = "AGB LVIS")
+
+lvis
 ########################## Step 5: Validation #################################
 # Calculate validation metrics
 validation_stats <- data.frame(
@@ -308,4 +380,3 @@ p3 <- ggplot(comparison_df, aes(x = residuals)) +
 
 # Arrange plots
 grid.arrange(p1, p2, p3, ncol = 2, nrow = 2)
-
