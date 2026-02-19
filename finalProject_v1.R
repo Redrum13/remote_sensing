@@ -322,22 +322,30 @@ r_pred <- rast(alldata_combi_df, type="xyz", crs = crs(alldata_combi))
 
 plot(10^(r_pred$agb_pred/10), main = "AGB estimation RF linear")
 
-r_pred_50 <- aggregate(r_pred, fact=2, fun='mean')
+r_pred_50 <- resample(r_pred, lvis, method='bilinear')
 
-plot(10^(r_pred_50$agb_pred/10), main = "AGB estimation RF linear")
+plot(10^(r_pred_50$agb_pred/10), main = "AGB estimation RF linear", range=c(0,800))
 
-plot(lvis, main = "AGB LVIS")
+plot(lvis, main = "AGB LVIS", range=c(0,800))
 
 lvis
 ########################## Step 5: Validation #################################
+
+
+validation_df <- as.data.frame(c(r_pred_50$agb_pred, lvis))
+validation_df <- na.omit(validation_df)
+compareGeom(lvis, r_pred_50)
+head(validation_df)
+
+
 # Calculate validation metrics
 validation_stats <- data.frame(
-  n_pairs = nrow(comparison_df),
-  rmse = sqrt(mean((comparison_df$lvis_agb - comparison_df$rf_predicted)^2)),
-  r2 = cor(comparison_df$lvis_agb, comparison_df$rf_predicted)^2,
-  mae = mean(abs(comparison_df$lvis_agb - comparison_df$rf_predicted)),
-  bias = mean(comparison_df$rf_predicted - comparison_df$lvis_agb),
-  rmse_percent = 100 * sqrt(mean((comparison_df$lvis_agb - comparison_df$rf_predicted)^2)) / mean(comparison_df$lvis_agb)
+  n_pairs = nrow(validation_df),
+  rmse = sqrt(mean((validation_df$lvis_agb_mean - validation_df$agb_pred)^2)),
+  r2 = cor(validation_df$lvis_agb_mean, validation_df$agb_pred)^2,
+  mae = mean(abs(validation_df$lvis_agb_mean - validation_df$agb_pred)),
+  bias = mean(validation_df$agb_pred - validation_df$lvis_agb_mean),
+  rmse_percent = 100 * sqrt(mean((validation_df$lvis_agb_mean - validation_df$agb_pred)^2)) / mean(validation_df$lvis_agb_mean)
 )
 
 print(validation_stats)
@@ -380,3 +388,4 @@ p3 <- ggplot(comparison_df, aes(x = residuals)) +
 
 # Arrange plots
 grid.arrange(p1, p2, p3, ncol = 2, nrow = 2)
+
