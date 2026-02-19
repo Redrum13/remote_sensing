@@ -19,7 +19,6 @@ library(caret)
 library(sf)
 library(terra)
 library(corrplot)
-install.packages('corrplot')
 
 
 ########################## Step 1: Pre-processing #################################
@@ -86,7 +85,7 @@ plot(rvi_p, range=c(0, 2), main = "RVI FSAR L-Band", col=rev(topo.colors(50)))
 #Combine the raster
 #Sentinel-1
 c_combi <- c(c_vh_agg, c_vv_agg, cr_c)
-names(c_combi) <- c("VH", "VV", "CR",)
+names(c_combi) <- c("SVH", "SVV", "SCR")
 
 #FSAR-L
 l_combi <- c(l_vh, l_hh, l_vv, cr_l, rvi_l)
@@ -101,7 +100,6 @@ extract_at_gedi <- function(raster_composite, gedi_points) {
   extracted <- extract(raster_composite, gedi_points, bind = TRUE)
   # Convert to data frame
   df <- as.data.frame(extracted)
-  df <- na.omit(df)
   return(df)
 }
 
@@ -111,8 +109,12 @@ L_gedi_df <- extract_at_gedi(l_combi, gedi_utm)
 P_gedi_df <- extract_at_gedi(p_combi, gedi_utm)
 
 # Check column names - identify which column is AGB
-names(S1_gedi_df)
+names(L_gedi_df)
 S1_gedi_df
+
+# Combine dataframes 
+alldata <- cbind(S1_gedi_df, L_gedi_df)
+alldata <- cbind(alldata, P_gedi_df)
 
 # Set up plotting area
 par(mfrow = c(2, 3))
