@@ -16,7 +16,6 @@ library(ggplot2)
 library(gridExtra)
 library(randomForest)
 library(caret)
-library(sf)
 library(terra)
 library(corrplot)
 
@@ -77,7 +76,7 @@ plot(cr_c, range=c(0, 1), col=rev(topo.colors(15)), main = "Cross Ratio Sentinel
 # radar vegetation index (still check the formula)
 rvi_l <- 8*l_vh / (l_hh + l_vv + 2*l_vh)  
 plot(rvi_l, range=c(0, 2), main = "RVI FSAR L-Band", col=rev(topo.colors(50)))
-rvi_p <- 8*l_vh / (l_hh + l_vv + 2*l_vh) 
+rvi_p <- 8*p_vh / (p_hh + p_vv + 2*p_vh) 
 hist(rvi_p)
 plot(rvi_p, range=c(0, 2), main = "RVI FSAR L-Band", col=rev(topo.colors(50)))
 
@@ -189,7 +188,7 @@ print(model_phv_cv$results)  # CV performance metrics
 # Train model of HH with CV
 set.seed(123)
 model_phh_cv <- train(log(agb) ~ PHH, 
-                      data = fsar_P_gedi_df,
+                      data = P_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
 # View results
@@ -199,7 +198,7 @@ print(model_phh_cv$results)  # CV performance metrics
 # Train model of VV with CV
 set.seed(123)
 model_pvv_cv <- train(log(agb) ~ PVV, 
-                      data = fsar_P_gedi_df,
+                      data = P_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
 # View results
@@ -209,11 +208,12 @@ print(model_pvv_cv$results)  # CV performance metrics
 
 
 # L-band cross validation
+L_gedi_df <-na.omit(L_gedi_df)
 
 # Train model of HV with CV
 set.seed(123)
 model_lhv_cv <- train(log(agb) ~ LHV, 
-                      data = fsar_L_gedi_df,
+                      data = L_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
 
@@ -224,7 +224,7 @@ print(model_lhv_cv$results)  # CV performance metrics
 # Train model of HH with CV
 set.seed(123)
 model_lhh_cv <- train(log(agb) ~ LHH, 
-                      data = fsar_L_gedi_df,
+                      data = L_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
 
@@ -235,7 +235,7 @@ print(model_lhh_cv$results)  # CV performance metrics
 # Train model of VV with CV
 set.seed(123)
 model_lvv_cv <- train(log(agb) ~ LVV, 
-                      data = fsar_L_gedi_df,
+                      data = L_gedi_df,
                       method = "lm",        # linear regression
                       trControl = ctrl)
 
@@ -263,6 +263,9 @@ linear_reg_results_overview <- bind_rows(
     df
   })
 )
+
+linear_reg_results_overview <- linear_reg_results_overview %>% select(model, everything())
+print(linear_reg_results_overview)
 
 ########################## Step 3.5: AGB estimation #################################
 
@@ -316,11 +319,9 @@ alldata_combi_df$agb_pred <- prediction
 
 head(alldata_combi_df)
 
-plot(alldata_combi_df)
-
 r_pred <- rast(alldata_combi_df, type="xyz", crs = crs(alldata_combi))
 
-plot(10^(r_pred$agb_pred/10), main = "AGB estimation RF linear")
+plot(10^(r_pred$agb_pred/10), main = "AGB estimation RF linear 25m", range=c(0,800))
 
 r_pred_50 <- resample(r_pred, lvis, method='bilinear')
 
