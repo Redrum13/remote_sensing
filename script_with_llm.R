@@ -320,8 +320,6 @@ plot(lvis, main = "AGB LVIS", range = c(0, 800))
 
 validation_df <- as.data.frame(c(r_pred_50$agb_pred, lvis))
 validation_df <- na.omit(validation_df)
-
-# Back-transform predicted values from log scale
 validation_df$agb_pred_bt <- exp(validation_df$agb_pred)
 
 validation_stats <- data.frame(
@@ -335,13 +333,22 @@ validation_stats <- data.frame(
 )
 print(validation_stats)
 
-# BUG: ggplot blocks referenced 'comparison_df' which was never created anywhere.
-# Built from validation_df here with the expected column names.
-comparison_df              <- validation_df
+# Build comparison dataframe with clean column names
+comparison_df <- validation_df
 comparison_df$lvis_agb     <- comparison_df$lvis_agb_mean
 comparison_df$rf_predicted <- comparison_df$agb_pred_bt
+comparison_df$residuals    <- comparison_df$rf_predicted - comparison_df$lvis_agb
 
-# --- Scatter plot: RF predictions vs LVIS AGB ---
+# Build spatial error dataframe from raster
+error_raster <- r_pred_50$agb_pred
+values(error_raster) <- exp(values(r_pred_50$agb_pred)) - values(lvis)
+names(error_raster) <- "prediction_error"
+
+error_df    <- as.data.frame(error_raster, xy = TRUE)
+error_df    <- na.omit(error_df)
+error_range <- max(abs(error_df$prediction_error))
+
+# --- p1: Scatter plot ---
 p1 <- ggplot(comparison_df, aes(x = lvis_agb, y = rf_predicted)) +
   geom_point(alpha = 0.5, color = "darkgreen") +
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed", linewidth = 1) +
@@ -358,8 +365,7 @@ p1 <- ggplot(comparison_df, aes(x = lvis_agb, y = rf_predicted)) +
   theme_minimal() +
   coord_fixed()
 
-# --- Residual plot ---
-comparison_df$residuals <- comparison_df$rf_predicted - comparison_df$lvis_agb
+# --- p2: Residuals vs LVIS AGB ---
 p2 <- ggplot(comparison_df, aes(x = lvis_agb, y = residuals)) +
   geom_point(alpha = 0.5, color = "darkgreen") +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed", linewidth = 1) +
@@ -368,8 +374,7 @@ p2 <- ggplot(comparison_df, aes(x = lvis_agb, y = residuals)) +
        x = "LVIS AGB (Mg/ha)", y = "Residuals (RF - LVIS)") +
   theme_minimal()
 
-# --- Error distribution plot ---
-# NOTE: ..density.. is deprecated in newer ggplot2; replaced with after_stat(density).
+# --- p3: Error distribution ---
 p3 <- ggplot(comparison_df, aes(x = residuals)) +
   geom_histogram(aes(y = after_stat(density)), bins = 30, fill = "forestgreen", alpha = 0.7) +
   geom_density(color = "darkgreen", linewidth = 1) +
@@ -378,4 +383,23 @@ p3 <- ggplot(comparison_df, aes(x = residuals)) +
        x = "Prediction Error (RF - LVIS)", y = "Density") +
   theme_minimal()
 
-grid.arrange(p1, p2, p3, ncol = 2, nrow = 2)
+# --- p4: Spatial error map ---
+p4 <- ggplot(error_df, aes(x = x, y = y, fill = prediction_error)) +
+  geom_raster() +
+  scale_fill_gradient2(
+    low      = "#2166ac",
+    mid      = "white",
+    high     = "#d6604d",
+    midpoint = 0,
+    limits   = c(-error_range, error_range),
+    name     = "Error\n(Mg/ha)"
+  ) +
+  coord_equal() +
+  labs(title = "Spatial Distribution of Prediction Error",
+       subtitle = "Blue = underestimate  |  Red = overestimate",
+       x = "Easting", y = "Northing") +
+  theme_minimal()
+
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+
+
