@@ -272,7 +272,7 @@ ctrl_rf <- trainControl(
 # converts AGB to dB, which has no physical justification. Use log(agb) for a
 # log-linear model, or agb directly. Fixed to log(agb) to match other models.
 rf_model <- train(
-  log(agb) ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,
+  agb ~ LHV + LHH + LVV + LCR + LRVI + PHV + PHH + PVV + PCR + PRVI,
   data      = alldata,
   method    = "rf",
   trControl = ctrl_rf
@@ -286,7 +286,7 @@ rf_model_log <- train(
   method    = "rf",
   trControl = ctrl_rf
 )
-print(rf_model_log)
+rf_model_log
 
 # ==============================================================================
 # Step 4.5: AGB Estimation (Random Forest)
@@ -296,9 +296,14 @@ alldata_combi    <- c(l_combi, p_combi)
 alldata_combi_df <- as.data.frame(alldata_combi, xy = TRUE)
 alldata_combi_df <- na.omit(alldata_combi_df)
 names(alldata_combi_df) <- c("lon", "lat", names(alldata_combi))
-
+log_cols_df <- c("LHV", "PHV", "LHH", "PHH", "LVV", "PVV")
+for (col in log_cols_df) {
+  alldata_combi_df[paste0(col, "_log")] <- 10 * log10(alldata_combi_df[[col]])
+}
+str(alldata_combi_df)
+names(alldata_combi_df)
 # Predict AGB across the full raster extent
-prediction                <- predict(rf_model, newdata = alldata_combi_df)
+prediction                <- predict(rf_model_log, newdata = alldata_combi_df)
 alldata_combi_df$agb_pred <- prediction
 
 # Back-transform: model trained on log(agb), so back-transform with exp()
@@ -313,13 +318,14 @@ r_pred_50 <- resample(r_pred, lvis, method = "bilinear")
 
 plot(exp(r_pred_50$agb_pred), main = "AGB Estimation RF (LVIS resolution)", range = c(0, 800))
 plot(lvis, main = "AGB LVIS", range = c(0, 800))
-
+compareGeom(r_pred_50, lvis)
 # ==============================================================================
 # Step 5: Validation
 # ==============================================================================
 
 validation_df <- as.data.frame(c(r_pred_50$agb_pred, lvis))
 validation_df <- na.omit(validation_df)
+head(validation_df)
 validation_df$agb_pred_bt <- exp(validation_df$agb_pred)
 
 validation_stats <- data.frame(
