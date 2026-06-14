@@ -1,5 +1,5 @@
 # remote_sensing
-R scripts
+R script
 
 A Quick preview of the results
 
